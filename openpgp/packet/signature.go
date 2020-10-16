@@ -57,6 +57,7 @@ type Signature struct {
 	PreferredSymmetric, PreferredHash, PreferredCompression []uint8
 	IssuerKeyId                                             *uint64
 	IsPrimaryId                                             *bool
+	NotationData                                            map[string][]string
 
 	// FlagsValid is set if any flags were given. See RFC 4880, section
 	// 5.2.3.21 for details.
@@ -76,8 +77,6 @@ type Signature struct {
 	// this key. This prevents an attacker from claiming another's signing
 	// subkey as their own.
 	EmbeddedSignature *Signature
-
-	NotationData map[string][]string
 
 	outSubpackets []outputSubpacket
 }
@@ -173,7 +172,6 @@ func (sig *Signature) parse(r io.Reader) (err error) {
 	default:
 		panic("unreachable")
 	}
-
 	return
 }
 

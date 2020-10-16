@@ -38,7 +38,6 @@ type Identity struct {
 	UserId        *packet.UserId
 	SelfSignature *packet.Signature
 	Signatures    []*packet.Signature
-	NotationData  map[string][]string
 }
 
 // A Subkey is an additional public key in an Entity. Subkeys can be used for
@@ -427,7 +426,6 @@ func addUserID(e *Entity, packets *packet.Reader, pkt *packet.UserId) error {
 			}
 			if identity.SelfSignature == nil || sig.CreationTime.After(identity.SelfSignature.CreationTime) {
 				identity.SelfSignature = sig
-				identity.NotationData = sig.NotationData
 			}
 
 			e.Identities[pkt.Id] = identity
