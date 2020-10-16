@@ -9,9 +9,9 @@ import (
 	"io"
 	"time"
 
-	"golang.org/x/crypto/openpgp/armor"
-	"golang.org/x/crypto/openpgp/errors"
-	"golang.org/x/crypto/openpgp/packet"
+	"github.com/sour-is/crypto/openpgp/armor"
+	"github.com/sour-is/crypto/openpgp/errors"
+	"github.com/sour-is/crypto/openpgp/packet"
 )
 
 // PublicKeyType is the armor type for a PGP public key.
@@ -38,6 +38,7 @@ type Identity struct {
 	UserId        *packet.UserId
 	SelfSignature *packet.Signature
 	Signatures    []*packet.Signature
+	NotationData  map[string][]string
 }
 
 // A Subkey is an additional public key in an Entity. Subkeys can be used for
@@ -424,7 +425,11 @@ func addUserID(e *Entity, packets *packet.Reader, pkt *packet.UserId) error {
 			if err = e.PrimaryKey.VerifyUserIdSignature(pkt.Id, e.PrimaryKey, sig); err != nil {
 				return errors.StructuralError("user ID self-signature invalid: " + err.Error())
 			}
-			identity.SelfSignature = sig
+			if identity.SelfSignature == nil || sig.CreationTime.After(identity.SelfSignature.CreationTime) {
+				identity.SelfSignature = sig
+				identity.NotationData = sig.NotationData
+			}
+
 			e.Identities[pkt.Id] = identity
 		} else {
 			identity.Signatures = append(identity.Signatures, sig)

@@ -13,12 +13,13 @@ import (
 	"encoding/binary"
 	"hash"
 	"io"
+	"io/ioutil"
 	"math/big"
 	"strconv"
 	"time"
 
-	"golang.org/x/crypto/openpgp/errors"
-	"golang.org/x/crypto/openpgp/s2k"
+	"github.com/sour-is/crypto/openpgp/errors"
+	"github.com/sour-is/crypto/openpgp/s2k"
 )
 
 const (
@@ -75,6 +76,8 @@ type Signature struct {
 	// this key. This prevents an attacker from claiming another's signing
 	// subkey as their own.
 	EmbeddedSignature *Signature
+
+	NotationData map[string][]string
 
 	outSubpackets []outputSubpacket
 }
@@ -170,6 +173,7 @@ func (sig *Signature) parse(r io.Reader) (err error) {
 	default:
 		panic("unreachable")
 	}
+
 	return
 }
 
@@ -198,6 +202,7 @@ const (
 	keyExpirationSubpacket       signatureSubpacketType = 9
 	prefSymmetricAlgosSubpacket  signatureSubpacketType = 11
 	issuerSubpacket              signatureSubpacketType = 16
+	notationDataSubpacket        signatureSubpacketType = 20
 	prefHashAlgosSubpacket       signatureSubpacketType = 21
 	prefCompressionSubpacket     signatureSubpacketType = 22
 	primaryUserIdSubpacket       signatureSubpacketType = 25
@@ -297,6 +302,22 @@ func parseSignatureSubpacket(sig *Signature, subpacket []byte, isHashed bool) (r
 		}
 		sig.IssuerKeyId = new(uint64)
 		*sig.IssuerKeyId = binary.BigEndian.Uint64(subpacket)
+	case notationDataSubpacket:
+		// Notation data, section 5.2.3.16
+		buf := bytes.NewBuffer(subpacket)
+		// The first 4 bytes are for unused flags.
+		io.CopyN(ioutil.Discard, buf, 4)
+
+		keyLength := binary.BigEndian.Uint16(buf.Next(2))
+		valueLength := binary.BigEndian.Uint16(buf.Next(2))
+
+		key := string(buf.Next(int(keyLength)))
+		value := string(buf.Next(int(valueLength)))
+
+		if sig.NotationData == nil {
+			sig.NotationData = make(map[string][]string)
+		}
+		sig.NotationData[key] = append(sig.NotationData[key], value)
 	case prefHashAlgosSubpacket:
 		// Preferred hash algorithms, section 5.2.3.8
 		if !isHashed {
